@@ -3,43 +3,45 @@ pipeline {
 
     environment {
         APP_NAME = "springboot-35"
-        IMAGE_NAME = "springboot-35:latest"
+        JAR_PATH = "target"
         PORT = "8181"
     }
 
     stages {
 
-        stage('Build JAR (Docker Maven)') {
+        stage('Build') {
             steps {
                 sh '''
-                docker run --rm \
-                  -v "$PWD":/workspace \
-                  -v "$HOME/.m2":/root/.m2 \
-                  -w /workspace \
-                  maven:3.9.6-eclipse-temurin-21 \
-                  mvn clean package -DskipTests
+                mvn clean package -DskipTests
                 '''
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Stop App (if running)') {
             steps {
-                sh 'docker build -t $IMAGE_NAME .'
+                sh '''
+                pkill -f ${APP_NAME}.jar || true
+                '''
             }
         }
 
-        stage('Deploy Container') {
+        stage('Run App') {
             steps {
                 sh '''
-                docker stop $APP_NAME || true
-                docker rm $APP_NAME || true
-
-                docker run -d \
-                  --name $APP_NAME \
-                  -p $PORT:8181 \
-                  $IMAGE_NAME
+                nohup java -jar ${JAR_PATH}/*.jar \
+                  --server.port=${PORT} \
+                  > app.log 2>&1 &
                 '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo "APP RUNNING at http://localhost:${PORT}"
+        }
+        failure {
+            echo "PIPELINE FAILED"
         }
     }
 }
