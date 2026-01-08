@@ -2,55 +2,30 @@ pipeline {
     agent any
 
     environment {
-        APP_NAME   = "springboot-35"
-        IMAGE_NAME = "springboot-35:latest"
-        APP_PORT   = "8181"
+        HOST = "localhost"
+        APP_NAME = "springboot-35"
+        IMAGE = "springboot-35:latest"
+        PORT = "8181"
     }
 
     stages {
-
-        stage('Build JAR (Docker Maven)') {
+        stage('Build') {
             steps {
-                sh '''
-                docker run --rm \
-                  -v "$PWD":/workspace \
-                  -v jenkins_m2:/root/.m2 \
-                  -w /workspace \
-                  maven:3.9.6-eclipse-temurin-21 \
-                  mvn clean package -DskipTests
-                '''
+                sh './mvnw clean package -DskipTests'
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Deploy via SSH') {
             steps {
                 sh '''
-                docker build -t $IMAGE_NAME .
+                ssh $HOST "
+                  docker stop $APP_NAME || true &&
+                  docker rm $APP_NAME || true &&
+                  docker build -t $IMAGE . &&
+                  docker run -d --name $APP_NAME -p $PORT:8181 $IMAGE
+                "
                 '''
             }
-        }
-
-        stage('Deploy Container') {
-            steps {
-                sh '''
-                docker stop $APP_NAME || true
-                docker rm $APP_NAME || true
-
-                docker run -d \
-                  --name $APP_NAME \
-                  -p $APP_PORT:8181 \
-                  $IMAGE_NAME
-                '''
-            }
-        }
-    }
-
-    post {
-        success {
-            echo "Application deployed at http://localhost:${APP_PORT}"
-        }
-        failure {
-            echo "Pipeline failed"
         }
     }
 }
