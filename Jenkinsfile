@@ -4,7 +4,7 @@ pipeline {
     environment {
         APP_NAME = "springboot-35"
         IMAGE_NAME = "springboot-35:latest"
-        PORT = "8080"
+        PORT = "8181"
     }
 
     stages {
@@ -36,7 +36,7 @@ pipeline {
 
                 docker run -d \
                   --name $APP_NAME \
-                  -p $PORT:8080 \
+                  -p $PORT:8181 \
                   $IMAGE_NAME
                 '''
             }
