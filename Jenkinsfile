@@ -4,13 +4,21 @@ pipeline {
     environment {
         APP_NAME = "springboot-35"
         IMAGE_NAME = "springboot-35:latest"
-        PORT = "8181"
+        PORT = "8080"
     }
 
     stages {
-        stage('Build JAR') {
+
+        stage('Build JAR (Docker Maven)') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh '''
+                docker run --rm \
+                  -v "$PWD":/workspace \
+                  -v "$HOME/.m2":/root/.m2 \
+                  -w /workspace \
+                  maven:3.9.6-eclipse-temurin-21 \
+                  mvn clean package -DskipTests
+                '''
             }
         }
 
@@ -28,7 +36,7 @@ pipeline {
 
                 docker run -d \
                   --name $APP_NAME \
-                  -p $PORT:8181 \
+                  -p $PORT:8080 \
                   $IMAGE_NAME
                 '''
             }
